@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -11,29 +13,97 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AnniversaryMark, ParkMark, Wordmark, serif } from '@/components/Brand';
-import { Glass } from '@/components/Glass';
+import { AnniversaryMark, Lockup, ParkMarkGold, serif } from '@/components/Brand';
 import { EliteCard } from '@/components/EliteCard';
-import {
-  Body,
-  BodyStrong,
-  Caption,
-  Card,
-  IconTile,
-  SectionHeader,
-  Small,
-  Tag,
-  Title,
-} from '@/components/ui';
-import { anniversary, colors, gradients, peso, radius, shadow, spacing } from '@/constants/theme';
-import { amenities, hotel, member, outlets, promos, stay } from '@/data/hotel';
+import { Glass } from '@/components/Glass';
+import { colors, gradients, peso, radius, spacing } from '@/constants/theme';
+import { amenities, hotel, member, outlets, stay } from '@/data/hotel';
 import { useApp } from '@/data/store';
 
-const QUICK_ACTIONS = [
+/* ── Small editorial primitives, local to this screen ──────────────── */
+
+function Rule({ width = 56, style }: { width?: number | '100%'; style?: object }) {
+  return <View style={[{ width, height: 1, backgroundColor: colors.hairline }, style]} />;
+}
+
+function SectionHead({
+  eyebrow,
+  title,
+  action,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={s.sectionHead}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.eyebrow}>{eyebrow}</Text>
+        <Text style={s.sectionTitle}>{title}</Text>
+      </View>
+      {action ? (
+        <Pressable onPress={onAction} hitSlop={10}>
+          {({ pressed }) => (
+            <Text style={[s.actionLink, pressed && { opacity: 0.6 }]}>{action}</Text>
+          )}
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/** Hairline ledger row — the workhorse of the dark sections. */
+function LedgerRow({
+  label,
+  value,
+  sub,
+  onPress,
+  last,
+  icon,
+}: {
+  label: string;
+  value?: string;
+  sub?: string;
+  onPress?: () => void;
+  last?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
+}) {
+  const body = (
+    <View style={[s.ledgerRow, !last && s.ledgerDivider]}>
+      {icon ? (
+        <Ionicons name={icon} size={17} color={colors.gold} style={{ width: 26 }} />
+      ) : null}
+      <View style={{ flex: 1 }}>
+        <Text style={s.ledgerLabel}>{label}</Text>
+        {sub ? <Text style={s.ledgerSub}>{sub}</Text> : null}
+      </View>
+      {value ? <Text style={s.ledgerValue}>{value}</Text> : null}
+      {onPress ? (
+        <Ionicons name="chevron-forward" size={15} color={colors.onDarkFaint} />
+      ) : null}
+    </View>
+  );
+  if (!onPress) return body;
+  return (
+    <Pressable onPress={onPress}>
+      {({ pressed }) => <View style={pressed ? { opacity: 0.6 } : undefined}>{body}</View>}
+    </Pressable>
+  );
+}
+
+function Section({ children, style }: { children: ReactNode; style?: object }) {
+  return <View style={[s.section, style]}>{children}</View>;
+}
+
+/* ── Screen ────────────────────────────────────────────────────────── */
+
+const SERVICES = [
   { id: 'key', label: 'Digital Key', icon: 'key-outline' as const, href: '/digital-key' },
   { id: 'dine', label: 'Room Service', icon: 'restaurant-outline' as const, href: '/(tabs)/dine' },
   { id: 'house', label: 'Housekeeping', icon: 'sparkles-outline' as const, href: '/(tabs)/stay' },
-  { id: 'book', label: 'Book a Room', icon: 'bed-outline' as const, href: '/(tabs)/rooms' },
+  { id: 'concierge', label: 'Concierge', icon: 'chatbubble-outline' as const, href: '/(tabs)/stay' },
 ];
 
 function greeting() {
@@ -46,266 +116,282 @@ function greeting() {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { logRequest } = useApp();
 
-  const promoW = width - spacing.xl * 2;
+  const folio = stay.folio.reduce((n, f) => n + f.amount, 0);
+  const cardW = width - spacing.xl * 2;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.page }}>
+      <StatusBar style="light" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
-        {/* ── Hero ── */}
-        <View style={s.hero}>
-          <Image source={{ uri: hotel.hero }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ paddingBottom: spacing.xxxl * 2 }}>
+        {/* ══ Hero ══ */}
+        <View style={[s.hero, { minHeight: Math.max(560, height * 0.74) }]}>
+          <Image source={hotel.hero} style={StyleSheet.absoluteFill} contentFit="cover" />
           <LinearGradient
-            colors={['rgba(74,12,23,0.82)', 'rgba(74,12,23,0.35)', 'rgba(26,18,20,0.9)']}
+            colors={gradients.heroScrim}
+            locations={[0, 0.42, 0.8]}
             style={StyleSheet.absoluteFill}
           />
-          <View style={[s.heroInner, { paddingTop: insets.top + spacing.md }]}>
+
+          <View style={[s.heroInner, { paddingTop: insets.top + spacing.sm }]}>
+            {/* top rail */}
             <View style={s.heroTop}>
-              <Wordmark size="sm" onDark />
-              <View style={s.heroActions}>
-                <Glass glassStyle="clear" style={s.heroPill}>
-                  <Text style={s.heroPillText}>{anniversary.years} YEARS</Text>
-                </Glass>
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => router.push('/(tabs)/stay')}>
+              <Glass glassStyle="clear" style={s.glassPill}>
+                <Text style={s.glassPillText}>1976 — 2026</Text>
+              </Glass>
+              <Pressable hitSlop={10} onPress={() => router.push('/(tabs)/stay')}>
+                {({ pressed }) => (
+                  <Glass
+                    glassStyle="clear"
+                    interactive
+                    style={[s.glassCircle, pressed && { opacity: 0.7 }]}>
+                    <Ionicons name="notifications-outline" size={18} color={colors.onDark} />
+                    <View style={s.dot} />
+                  </Glass>
+                )}
+              </Pressable>
+            </View>
+
+            {/* spacer keeps the masthead pinned low without negative margins */}
+            <View style={{ flex: 1, minHeight: spacing.xxl }} />
+
+            {/* masthead */}
+            <View style={s.masthead}>
+              <Lockup width={Math.min(228, width * 0.6)} />
+              <Text style={s.display}>
+                Fifty years on{'\n'}Ocampo Street
+              </Text>
+              <Rule style={{ marginTop: spacing.lg }} />
+              <Text style={s.address}>{hotel.address.toUpperCase()}</Text>
+            </View>
+
+            {/* stay pill — glass, over photography */}
+            {stay.active ? (
+              <View style={{ marginTop: spacing.xl }}>
+                <Text style={s.greeting}>
+                  {greeting()}, {member.firstName}
+                </Text>
+                <Pressable onPress={() => router.push('/digital-key')}>
                   {({ pressed }) => (
                     <Glass
-                      glassStyle="clear"
+                      glassStyle="regular"
                       interactive
-                      style={[s.bell, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name="notifications-outline" size={19} color={colors.onDark} />
-                      <View style={s.bellDot} />
+                      style={[s.stayPill, pressed && { opacity: 0.8 }]}>
+                      <View style={s.keyBadge}>
+                        <Ionicons name="key" size={15} color={colors.goldLight} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.stayRoom}>Room {stay.room}</Text>
+                        <Text style={s.stayMeta}>
+                          {stay.roomType} · until {stay.checkOut}
+                        </Text>
+                      </View>
+                      <Text style={s.unlock}>UNLOCK</Text>
+                      <Ionicons name="chevron-forward" size={15} color={colors.goldLight} />
                     </Glass>
                   )}
                 </Pressable>
               </View>
-            </View>
-
-            <View style={s.heroCopy}>
-              <Caption color={colors.goldLight}>{hotel.address}</Caption>
-              <Text style={s.heroTitle}>
-                {greeting()},{'\n'}
-                {member.firstName}.
-              </Text>
-              <Body color={colors.onDarkMuted} style={{ marginTop: spacing.sm }}>
-                {hotel.blurb}
-              </Body>
-            </View>
+            ) : null}
           </View>
         </View>
 
-        {/* ── Current stay ── */}
-        <View style={s.body}>
-          {stay.active ? (
-            <Card style={s.stayCard} padded={false}>
-              <View style={s.stayTop}>
-                <View style={{ flex: 1 }}>
-                  <Caption color={colors.gold}>Currently checked in</Caption>
-                  <Title style={{ marginTop: 4 }}>Room {stay.room}</Title>
-                  <Small style={{ marginTop: 2 }}>
-                    {stay.roomType} · {stay.checkIn} – {stay.checkOut} · {stay.guests} guests
-                  </Small>
-                </View>
-                <Pressable
-                  onPress={() => router.push('/digital-key')}
-                  style={({ pressed }) => [s.keyBtn, pressed && { opacity: 0.85 }]}>
-                  <Ionicons name="key" size={20} color={colors.onDark} />
-                  <Text style={s.keyBtnText}>Unlock</Text>
-                </Pressable>
-              </View>
-              <View style={s.stayDivider} />
-              <Pressable
+        {/* ══ Your stay ══ */}
+        {stay.active ? (
+          <Section>
+            <SectionHead
+              eyebrow="In residence"
+              title="Your stay"
+              action="Details"
+              onAction={() => router.push('/(tabs)/stay')}
+            />
+            <View style={s.ledger}>
+              <LedgerRow label="Nights" value={`${stay.nights}`} sub={`${stay.checkIn} – ${stay.checkOut}`} />
+              <LedgerRow label="Guests" value={`${stay.guests}`} />
+              <LedgerRow
+                label="Folio balance"
+                value={peso(folio)}
                 onPress={() => router.push('/(tabs)/stay')}
-                style={({ pressed }) => [s.stayFooter, pressed && { opacity: 0.7 }]}>
-                <Small>Folio balance</Small>
-                <View style={s.row}>
-                  <BodyStrong>
-                    {peso(stay.folio.reduce((n, f) => n + f.amount, 0))}
-                  </BodyStrong>
-                  <Ionicons name="chevron-forward" size={15} color={colors.inkFaint} />
-                </View>
-              </Pressable>
-            </Card>
-          ) : null}
+                last
+              />
+            </View>
+          </Section>
+        ) : null}
 
-          {/* ── Quick actions ── */}
-          <View style={s.quickGrid}>
-            {QUICK_ACTIONS.map((a) => (
+        {/* ══ Services ══ */}
+        <Section>
+          <SectionHead eyebrow="At your service" title="Request" />
+          <View style={s.services}>
+            {SERVICES.map((a) => (
               <Pressable
                 key={a.id}
+                style={s.serviceCell}
                 onPress={() => {
                   if (a.id === 'house') logRequest('Housekeeping', 'sparkles-outline');
                   router.push(a.href as never);
-                }}
-                style={({ pressed }) => [s.quickItem, pressed && { opacity: 0.65 }]}>
-                <IconTile icon={a.icon} tone="maroon" size={50} />
-                <Small color={colors.ink} style={{ fontWeight: '600', textAlign: 'center' }}>
-                  {a.label}
-                </Small>
+                }}>
+                {({ pressed }) => (
+                  <View style={[s.serviceInner, pressed && { opacity: 0.55 }]}>
+                    <View style={s.serviceIcon}>
+                      <Ionicons name={a.icon} size={20} color={colors.goldLight} />
+                    </View>
+                    <Text style={s.serviceLabel} numberOfLines={2}>
+                      {a.label}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             ))}
           </View>
+        </Section>
 
-          {/* ── Elite Card ── */}
-          <SectionHeader
-            title="Your Elite Card"
+        {/* ══ Elite Card ══ */}
+        <Section>
+          <SectionHead
+            eyebrow="Membership"
+            title="Elite Card"
             action="Open"
             onAction={() => router.push('/(tabs)/elite')}
-            style={{ marginTop: spacing.xl }}
           />
-          <Pressable
-            onPress={() => router.push('/(tabs)/elite')}
-            style={({ pressed }) => pressed && { opacity: 0.9 }}>
-            <EliteCard
-              compact
-              memberNo={member.memberNo}
-              name={`${member.firstName} ${member.lastName}`}
-              tier={member.tier}
-            />
+          <Pressable onPress={() => router.push('/(tabs)/elite')}>
+            {({ pressed }) => (
+              <View style={pressed ? { opacity: 0.9 } : undefined}>
+                <EliteCard
+                  memberNo={member.memberNo}
+                  name={`${member.firstName} ${member.lastName}`}
+                  since={member.since}
+                  style={{ width: cardW }}
+                />
+              </View>
+            )}
           </Pressable>
-          <View style={s.pointsRow}>
-            <View>
-              <Caption>Points balance</Caption>
-              <Text style={s.pointsValue}>{member.points.toLocaleString('en-PH')}</Text>
+          <View style={s.stats}>
+            <View style={s.stat}>
+              <Text style={s.statValue}>{member.points.toLocaleString('en-PH')}</Text>
+              <Text style={s.statLabel}>POINTS</Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Caption>Saved this year</Caption>
-              <Text style={[s.pointsValue, { color: colors.gold }]}>{peso(member.ytdSaved)}</Text>
+            <View style={s.statDivider} />
+            <View style={s.stat}>
+              <Text style={s.statValue}>{peso(member.ytdSaved)}</Text>
+              <Text style={s.statLabel}>SAVED THIS YEAR</Text>
             </View>
           </View>
-        </View>
+        </Section>
 
-        {/* ── Promos ── */}
-        <SectionHeader title="What's on" style={{ marginTop: spacing.xl, ...s.bodyPad }} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={promoW + spacing.md}
-          decelerationRate="fast"
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
-          {promos.map((p) => (
-            <View key={p.id} style={[s.promo, { width: promoW }]}>
-              <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              <LinearGradient colors={gradients.scrim} style={StyleSheet.absoluteFill} />
-              <View style={s.promoCopy}>
-                <BodyStrong color={colors.onDark} numberOfLines={1}>
-                  {p.title}
-                </BodyStrong>
-                <Small color={colors.onDarkMuted} numberOfLines={1}>
-                  {p.sub}
-                </Small>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* ── 50th anniversary ── */}
-        <View style={[s.body, { marginTop: spacing.xl }]}>
-          <View style={s.anniversary}>
-            <LinearGradient
-              colors={gradients.maroonWash}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
+        {/* ══ Dining ══ */}
+        <View style={{ marginTop: spacing.xxl }}>
+          <View style={{ paddingHorizontal: spacing.xl }}>
+            <SectionHead
+              eyebrow="Tonight at the hotel"
+              title="Dining"
+              action="All"
+              onAction={() => router.push('/(tabs)/dine')}
             />
-            <View style={{ flex: 1 }}>
-              <Caption color={colors.goldLight}>
-                {anniversary.founded} — {anniversary.year}
-              </Caption>
-              <Text style={s.anniversaryTitle}>Fifty years{'\n'}on Ocampo Street</Text>
-              <Body color={colors.onDarkMuted} style={{ marginTop: spacing.sm }}>
-                Golden anniversary offers running all year for Elite members.
-              </Body>
-            </View>
-            <AnniversaryMark size={78} />
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
+            {outlets.map((o) => (
+              <Pressable key={o.id} onPress={() => router.push(`/outlet/${o.id}` as never)}>
+                {({ pressed }) => (
+                  <View style={[s.outlet, pressed && { opacity: 0.8 }]}>
+                    <Image source={o.image} style={s.outletImg} contentFit="cover" />
+                    <View style={s.outletBody}>
+                      <Text style={s.outletName} numberOfLines={1}>
+                        {o.name}
+                      </Text>
+                      <Text style={s.outletKind} numberOfLines={1}>
+                        {o.kind}
+                      </Text>
+                      <Text style={s.outletElite}>{o.eliteDiscount.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ══ Anniversary feature ══ */}
+        <View style={s.feature}>
+          <Image source={hotel.exterior} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <LinearGradient
+            colors={['rgba(44,7,16,0.55)', 'rgba(44,7,16,0.92)']}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={s.featureInner}>
+            <AnniversaryMark size={74} />
+            <Text style={s.featureTitle}>The Golden Year</Text>
+            <Text style={s.featureBody}>
+              Fifty years of the Atrium, Tsukiji and the Park. Anniversary rates and member
+              certificates all through {new Date().getFullYear()}.
+            </Text>
+            <Rule width={40} style={{ marginTop: spacing.lg }} />
           </View>
         </View>
 
-        {/* ── Dining ── */}
-        <SectionHeader
-          title="Dining"
-          action="All outlets"
-          onAction={() => router.push('/(tabs)/dine')}
-          style={{ marginTop: spacing.xl, ...s.bodyPad }}
-        />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
-          {outlets.map((o) => (
-            <Pressable
-              key={o.id}
-              onPress={() => router.push(`/outlet/${o.id}` as never)}
-              style={({ pressed }) => [s.outlet, pressed && { opacity: 0.8 }]}>
-              <Image source={{ uri: o.image }} style={s.outletImg} contentFit="cover" />
-              <View style={{ padding: spacing.md, gap: 2 }}>
-                <BodyStrong numberOfLines={1}>{o.name}</BodyStrong>
-                <Small numberOfLines={1}>{o.kind}</Small>
-                <View style={{ marginTop: spacing.xs }}>
-                  <Tag label={o.eliteDiscount} tone="gold" />
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* ── Amenities ── */}
-        <View style={[s.body, { marginTop: spacing.xl }]}>
-          <SectionHeader title="Hotel amenities" />
-          <Card padded={false}>
+        {/* ══ The hotel ══ */}
+        <Section>
+          <SectionHead eyebrow="The house" title="Amenities" />
+          <View style={s.ledger}>
             {amenities.map((a, i) => (
-              <View key={a.id}>
-                <View style={s.amenityRow}>
-                  <IconTile icon={a.icon as never} tone="gold" size={38} />
-                  <View style={{ flex: 1 }}>
-                    <BodyStrong>{a.name}</BodyStrong>
-                    <Small>{a.detail}</Small>
-                  </View>
-                </View>
-                {i < amenities.length - 1 ? <View style={s.amenityDivider} /> : null}
-              </View>
+              <LedgerRow
+                key={a.id}
+                icon={a.icon as keyof typeof Ionicons.glyphMap}
+                label={a.name}
+                sub={a.detail}
+                last={i === amenities.length - 1}
+              />
             ))}
-          </Card>
-        </View>
+          </View>
+        </Section>
 
-        {/* ── Footer ── */}
-        <View style={s.footer}>
-          <ParkMark size={34} variant="badge" />
-          <Small color={colors.inkFaint} style={{ textAlign: 'center', marginTop: spacing.md }}>
+        {/* ══ Colophon ══ */}
+        <View style={s.colophon}>
+          <ParkMarkGold size={30} opacity={0.5} />
+          <Rule width={30} style={{ marginTop: spacing.lg }} />
+          <Text style={s.colophonText}>
             {hotel.address}
             {'\n'}
             {hotel.phone}
-          </Small>
-          <Text style={s.footerNote}>Prototype · sample data</Text>
+          </Text>
+          <Text style={s.colophonNote}>PROTOTYPE · SAMPLE DATA</Text>
         </View>
       </ScrollView>
     </View>
   );
 }
 
+/* ── Styles ────────────────────────────────────────────────────────── */
+
 const s = StyleSheet.create({
-  hero: { height: 330 },
-  heroInner: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
+  /* Hero */
+  hero: { width: '100%' },
+  heroInner: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  heroPill: {
-    paddingHorizontal: 12,
+  glassPill: {
+    paddingHorizontal: 13,
     paddingVertical: 8,
     borderRadius: radius.pill,
     overflow: 'hidden',
   },
-  heroPillText: {
-    fontSize: 10,
-    letterSpacing: 1.2,
-    fontWeight: '800',
+  glassPillText: {
+    fontFamily: serif,
+    fontSize: 11,
+    letterSpacing: 1.4,
     color: colors.onDark,
   },
-  bell: {
+  glassCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -313,118 +399,214 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  bellDot: {
+  dot: {
     position: 'absolute',
     top: 9,
     right: 10,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.gold,
   },
-  heroCopy: { marginTop: 'auto' },
-  heroTitle: {
+
+  masthead: { alignItems: 'center' },
+  display: {
     fontFamily: serif,
-    fontSize: 34,
-    lineHeight: 39,
-    color: colors.onDark,
-    marginTop: spacing.sm,
+    fontSize: 36,
+    lineHeight: 43,
     fontWeight: '700',
-  },
-  body: { paddingHorizontal: spacing.xl },
-  bodyPad: { paddingHorizontal: spacing.xl },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  stayCard: { marginTop: -spacing.xxl, ...shadow.lifted },
-  stayTop: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, gap: spacing.md },
-  keyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.maroon,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 11,
-    borderRadius: radius.pill,
-  },
-  keyBtnText: { color: colors.onDark, fontWeight: '700', fontSize: 14 },
-  stayDivider: { height: 1, backgroundColor: colors.line, marginHorizontal: spacing.lg },
-  stayFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-  },
-
-  quickGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    color: colors.onDark,
+    textAlign: 'center',
     marginTop: spacing.xl,
   },
-  quickItem: { alignItems: 'center', gap: spacing.sm, width: '23%' },
-
-  pointsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xs,
+  address: {
+    fontSize: 9.5,
+    letterSpacing: 1.6,
+    color: colors.goldLight,
+    marginTop: spacing.md,
+    textAlign: 'center',
+    fontWeight: '600',
   },
-  pointsValue: {
+
+  greeting: {
     fontFamily: serif,
-    fontSize: 24,
-    color: colors.ink,
-    fontWeight: '700',
-    marginTop: 2,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    color: colors.onDarkMuted,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
-
-  promo: { height: 150, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surfaceAlt },
-  promoCopy: { marginTop: 'auto', padding: spacing.lg },
-
-  anniversary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.xl,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(228,199,102,0.3)',
-  },
-  anniversaryTitle: {
-    fontFamily: serif,
-    fontSize: 24,
-    lineHeight: 29,
-    color: colors.onDark,
-    fontWeight: '700',
-    marginTop: spacing.sm,
-  },
-
-  outlet: {
-    width: 190,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    overflow: 'hidden',
-    ...shadow.card,
-  },
-  outletImg: { width: '100%', height: 110, backgroundColor: colors.surfaceAlt },
-
-  amenityRow: {
+  stayPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
   },
-  amenityDivider: { height: 1, backgroundColor: colors.line, marginLeft: 66 },
-
-  footer: { alignItems: 'center', marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
-  footerNote: {
+  keyBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(201,162,39,0.22)',
+  },
+  stayRoom: { fontSize: 15, fontWeight: '700', color: colors.onDark },
+  stayMeta: { fontSize: 11.5, color: colors.onDarkMuted, marginTop: 1 },
+  unlock: {
     fontSize: 10,
-    letterSpacing: 1,
-    color: colors.inkFaint,
-    marginTop: spacing.lg,
+    letterSpacing: 1.2,
+    fontWeight: '800',
+    color: colors.goldLight,
+  },
+
+  /* Sections */
+  section: { paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: spacing.lg,
+  },
+  eyebrow: {
+    fontSize: 9.5,
+    letterSpacing: 1.6,
+    fontWeight: '700',
+    color: colors.gold,
     textTransform: 'uppercase',
+  },
+  sectionTitle: {
+    fontFamily: serif,
+    fontSize: 25,
+    fontWeight: '700',
+    color: colors.onDark,
+    marginTop: 5,
+  },
+  actionLink: {
+    fontSize: 12,
+    letterSpacing: 0.6,
+    fontWeight: '700',
+    color: colors.goldLight,
+    paddingBottom: 4,
+  },
+
+  /* Ledger */
+  ledger: {
+    borderTopWidth: 1,
+    borderTopColor: colors.hairline,
+  },
+  ledgerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  ledgerDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairlineSoft },
+  ledgerLabel: { fontSize: 15, color: colors.onDark, fontWeight: '500' },
+  ledgerSub: { fontSize: 12, color: colors.onDarkFaint, marginTop: 2 },
+  ledgerValue: {
+    fontFamily: serif,
+    fontSize: 17,
+    color: colors.goldLight,
+    marginRight: 2,
+  },
+
+  /* Services */
+  services: { flexDirection: 'row', gap: spacing.sm },
+  serviceCell: { flex: 1 },
+  serviceInner: { alignItems: 'center', gap: spacing.sm },
+  serviceIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.hairlineSoft,
+  },
+  serviceLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.onDarkMuted,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  /* Elite stats */
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xl,
+  },
+  stat: { flex: 1, alignItems: 'center' },
+  statDivider: { width: 1, height: 34, backgroundColor: colors.hairlineSoft },
+  statValue: { fontFamily: serif, fontSize: 22, color: colors.onDark, fontWeight: '700' },
+  statLabel: {
+    fontSize: 9,
+    letterSpacing: 1.3,
+    color: colors.gold,
+    marginTop: 5,
+    fontWeight: '700',
+  },
+
+  /* Dining */
+  outlet: {
+    width: 168,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.hairlineSoft,
+  },
+  outletImg: { width: '100%', height: 108, backgroundColor: colors.pageDeep },
+  outletBody: { padding: spacing.md },
+  outletName: { fontFamily: serif, fontSize: 15, color: colors.onDark, fontWeight: '700' },
+  outletKind: { fontSize: 11.5, color: colors.onDarkFaint, marginTop: 2 },
+  outletElite: {
+    fontSize: 9,
+    letterSpacing: 1.1,
+    color: colors.gold,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+
+  /* Anniversary feature */
+  feature: { marginTop: spacing.xxl, minHeight: 300, justifyContent: 'center' },
+  featureInner: { alignItems: 'center', padding: spacing.xxl },
+  featureTitle: {
+    fontFamily: serif,
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.onDark,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  featureBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.onDarkMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    maxWidth: 320,
+  },
+
+  /* Colophon */
+  colophon: { alignItems: 'center', marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
+  colophonText: {
+    fontFamily: serif,
+    fontSize: 12.5,
+    lineHeight: 20,
+    color: colors.onDarkFaint,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+  colophonNote: {
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.28)',
+    marginTop: spacing.xl,
     fontWeight: '700',
   },
 });

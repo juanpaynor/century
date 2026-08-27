@@ -1,5 +1,4 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -30,7 +29,6 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <AppProvider>
-          <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerShown: false,
@@ -38,14 +36,18 @@ export default function RootLayout() {
             }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
+            <Stack.Screen name="room/[id]" options={{ headerShown: false }} />
+
             <Stack.Screen
-              name="room/[id]"
-              options={{ ...glassHeader, title: 'Room', headerBackTitle: 'Rooms' }}
+              name="booking/dates"
+              options={{
+                ...glassHeader,
+                presentation: 'modal',
+                title: 'Dates & guests',
+                sheetGrabberVisible: true,
+              }}
             />
-            <Stack.Screen
-              name="outlet/[id]"
-              options={{ ...glassHeader, title: 'Dining', headerBackTitle: 'Dine' }}
-            />
+            <Stack.Screen name="outlet/[id]" options={{ headerShown: false }} />
             <Stack.Screen
               name="booking/review"
               options={{ ...glassHeader, title: 'Review booking' }}

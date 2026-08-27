@@ -42,10 +42,13 @@ export const colors = {
   warning: '#B4762A',
   danger: '#B3392F',
 
-  /* ── Elite tiers ── */
-  tierClassic: '#8A7F72',
-  tierGold: '#C9A227',
-  tierPlatinum: '#5B6670',
+  /* ── Dark ground (homepage) ── */
+  page: '#3F0A14',
+  pageDeep: '#2C0710',
+  raised: 'rgba(255,255,255,0.055)',
+  raisedStrong: 'rgba(255,255,255,0.09)',
+  hairline: 'rgba(228,199,102,0.22)',
+  hairlineSoft: 'rgba(255,255,255,0.10)',
 } as const;
 
 /** Gradient ramps — the Elite Card and hero surfaces lean on these. */
@@ -54,6 +57,13 @@ export const gradients = {
   gold: ['#E4C766', '#C9A227', '#A8861D'] as const,
   scrim: ['transparent', 'rgba(26,18,20,0.86)'] as const,
   maroonWash: ['#6E1423', '#4A0C17'] as const,
+  /**
+   * Hero scrim. Tuned for the supplied Deluxe room shot: barely tinted over
+   * the window and lamp at the top, fully solid by 80% so the white masthead
+   * never has to sit on the bright duvet.
+   */
+  heroScrim: ['rgba(44,7,16,0.10)', 'rgba(44,7,16,0.48)', '#3F0A14'] as const,
+  pageWash: ['#3F0A14', '#2C0710'] as const,
 };
 
 export const spacing = {

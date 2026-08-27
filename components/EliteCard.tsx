@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 import { colors, gradients, radius, shadow, spacing } from '@/constants/theme';
-import { EliteWordmark, ParkMark, serif, Wordmark } from './Brand';
+import { EliteWordmark, ParkMarkGold, serif, Wordmark } from './Brand';
 
 /**
  * Digital twin of the physical Elite Card: faceted maroon ground, gold
@@ -36,13 +36,14 @@ const FACETS: { points: string; fill: string; opacity: number }[] = [
 export function EliteCard({
   memberNo,
   name,
-  tier,
+  since,
   style,
   compact = false,
 }: {
   memberNo: string;
   name: string;
-  tier: string;
+  /** Year joined — the card has no tiers, so this fills the corner. */
+  since: number;
   style?: ViewStyle;
   compact?: boolean;
 }) {
@@ -69,7 +70,7 @@ export function EliteCard({
 
       {/* Oversized monogram, bleeding off the right edge */}
       <View style={s.monogram} pointerEvents="none">
-        <ParkMark size={compact ? 150 : 205} variant="gold" />
+        <ParkMarkGold size={compact ? 128 : 176} opacity={0.9} />
       </View>
 
       <View style={[s.content, compact && { padding: spacing.lg }]}>
@@ -84,8 +85,8 @@ export function EliteCard({
             <Text style={s.memberNo}>{memberNo}</Text>
             <Text style={s.memberName}>{name.toUpperCase()}</Text>
           </View>
-          <View style={s.tierPill}>
-            <Text style={s.tierText}>{tier.toUpperCase()}</Text>
+          <View style={s.sincePill}>
+            <Text style={s.sinceText}>MEMBER SINCE {since}</Text>
           </View>
         </View>
       </View>
@@ -132,7 +133,7 @@ const s = StyleSheet.create({
     color: colors.onDarkMuted,
     marginTop: 3,
   },
-  tierPill: {
+  sincePill: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radius.pill,
@@ -140,7 +141,7 @@ const s = StyleSheet.create({
     borderColor: 'rgba(228,199,102,0.55)',
     backgroundColor: 'rgba(201,162,39,0.16)',
   },
-  tierText: {
+  sinceText: {
     fontSize: 9.5,
     letterSpacing: 1.4,
     fontWeight: '800',

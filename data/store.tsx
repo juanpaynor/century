@@ -6,7 +6,17 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { certificates as seedCerts, menu, type Certificate, type MenuItem } from './hotel';
+import { addDays, nightsBetween, startOfDay } from '@/constants/dates';
+import {
+  certificates as seedCerts,
+  member,
+  menu,
+  pointsHistory as seedHistory,
+  type Certificate,
+  type MenuItem,
+  type PointsEntry,
+  type Reward,
+} from './hotel';
 
 /**
  * In-memory prototype state. Nothing persists across reloads by design —
@@ -22,6 +32,13 @@ export type Order = {
   placedAt: string;
   status: 'Preparing' | 'On the way' | 'Delivered';
   note: string;
+};
+
+/** Live search criteria shared by the rooms list, detail and review screens. */
+export type Search = {
+  checkIn: Date;
+  checkOut: Date;
+  guests: number;
 };
 
 export type Booking = {
@@ -45,6 +62,15 @@ export type RequestLog = {
 };
 
 type Ctx = {
+  points: number;
+  pointsHistory: PointsEntry[];
+  /** Returns false when the balance is short. */
+  redeemReward: (reward: Reward) => boolean;
+
+  search: Search;
+  nights: number;
+  setSearch: (next: Partial<Search>) => void;
+
   cart: CartLine[];
   cartCount: number;
   cartTotal: number;
@@ -71,6 +97,56 @@ const now = () =>
   new Date().toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [search, setSearchState] = useState<Search>(() => {
+    const checkIn = addDays(new Date(), 1);
+    return { checkIn, checkOut: addDays(checkIn, 2), guests: 2 };
+  });
+
+  const setSearch = useCallback((next: Partial<Search>) => {
+    setSearchState((prev) => {
+      const merged = { ...prev, ...next };
+      // check-out must always follow check-in
+      if (startOfDay(merged.checkOut) <= startOfDay(merged.checkIn)) {
+        merged.checkOut = addDays(merged.checkIn, 1);
+      }
+      merged.guests = Math.min(6, Math.max(1, merged.guests));
+      return merged;
+    });
+  }, []);
+
+  const nights = useMemo(
+    () => nightsBetween(search.checkIn, search.checkOut),
+    [search.checkIn, search.checkOut],
+  );
+
+  const [points, setPoints] = useState(member.points);
+  const [pointsHistory, setPointsHistory] = useState<PointsEntry[]>(seedHistory);
+
+  const redeemReward = useCallback(
+    (reward: Reward) => {
+      let ok = false;
+      setPoints((bal) => {
+        if (bal < reward.points) return bal;
+        ok = true;
+        return bal - reward.points;
+      });
+      if (ok) {
+        setPointsHistory((prev) => [
+          {
+            id: `r-${Date.now()}`,
+            label: `${reward.title} redeemed`,
+            sub: 'Reward',
+            date: new Date().toLocaleDateString('en-PH', { day: 'numeric', month: 'short' }),
+            points: -reward.points,
+          },
+          ...prev,
+        ]);
+      }
+      return ok;
+    },
+    [],
+  );
+
   const [cart, setCart] = useState<CartLine[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -137,6 +213,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      points,
+      pointsHistory,
+      redeemReward,
+      search,
+      nights,
+      setSearch,
       cart,
       cartCount,
       cartTotal,
@@ -153,6 +235,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       redeemCertificate,
     }),
     [
+      points,
+      pointsHistory,
+      redeemReward,
+      search,
+      nights,
+      setSearch,
       cart,
       cartCount,
       cartTotal,
