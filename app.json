@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Century Park Manila",
-    "slug": "century-park-manila",
+    "slug": "century-park",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -49,6 +49,13 @@
     ],
     "scheme": "centurypark",
     "description": "Prototype guest app for Century Park Hotel Manila.",
-    "primaryColor": "#6E1423"
+    "primaryColor": "#6E1423",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2bdf1b2f-297d-4dc6-8ab6-96897bc65269"
+      }
+    },
+    "owner": "hanghut-inc"
   }
 }
